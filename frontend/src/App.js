@@ -26,7 +26,7 @@ import {
 } from '@mui/material';
 import {
   Add,
-  AssignmentTurnedIn,
+  ArrowForward,
   AutoAwesome,
   CalendarMonth,
   Close,
@@ -34,13 +34,17 @@ import {
   Delete,
   Edit,
   FilterList,
+  HomeRounded,
+  Insights,
   LocalOffer,
   Person,
   Refresh,
+  RocketLaunch,
   Save,
   School,
   Search,
-  TrendingUp,
+  AutoAwesomeMotion,
+  TaskAlt,
   WarningAmber
 } from '@mui/icons-material';
 import './index.css';
@@ -72,22 +76,48 @@ const statusClass = {
   Completed: 'status-completed'
 };
 
-const priorityColor = {
-  Low: 'success',
-  Medium: 'warning',
-  High: 'error'
+const priorityClass = {
+  Low: 'priority-low',
+  Medium: 'priority-medium',
+  High: 'priority-high'
 };
+
+const sortDefaults = {
+  search: '',
+  status: '',
+  department: '',
+  priority: '',
+  sort: '-updatedAt'
+};
+
+const formatCurrency = (value) =>
+  new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0
+  }).format(Number(value || 0));
+
+const formatDate = (value) =>
+  value
+    ? new Date(value).toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      })
+    : 'No date';
 
 function App() {
   const [projects, setProjects] = useState([]);
   const [stats, setStats] = useState({ total: 0, completed: 0, inReview: 0, urgent: 0, departments: 0 });
-  const [filters, setFilters] = useState({ search: '', status: '', department: '', priority: '', sort: '-updatedAt' });
+  const [filters, setFilters] = useState(sortDefaults);
   const [projectForm, setProjectForm] = useState(emptyProject);
   const [editingId, setEditingId] = useState(null);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [showIntro, setShowIntro] = useState(true);
+  const [transitionStage, setTransitionStage] = useState('intro');
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
@@ -109,10 +139,23 @@ function App() {
     fetchProjects();
   }, [fetchProjects]);
 
-  const completionRate = useMemo(() => {
-    if (!stats.total) return 0;
-    return Math.round((stats.completed / stats.total) * 100);
-  }, [stats]);
+  const dashboardMetrics = useMemo(() => {
+    const total = stats.total || projects.length;
+    const completed = stats.completed || 0;
+    const progress = total ? Math.round((completed / total) * 100) : 0;
+    const totalBudget = projects.reduce((sum, project) => sum + Number(project.budget || 0), 0);
+    const active = projects.filter((project) => project.status === 'In Progress').length;
+    const recent = [...projects]
+      .sort((left, right) => new Date(right.updatedAt || 0) - new Date(left.updatedAt || 0))
+      .slice(0, 4);
+
+    return {
+      progress,
+      totalBudget,
+      active,
+      recent
+    };
+  }, [projects, stats]);
 
   const openCreateDialog = () => {
     setEditingId(null);
@@ -185,242 +228,369 @@ function App() {
     setFilters((current) => ({ ...current, [field]: value }));
   };
 
+  const enterWorkspace = () => {
+    setTransitionStage('exiting-intro');
+    window.setTimeout(() => {
+      setShowIntro(false);
+      setTransitionStage('workspace-enter');
+      window.setTimeout(() => setTransitionStage('workspace'), 520);
+    }, 420);
+  };
+
+  const goToIntro = () => {
+    setTransitionStage('exiting-workspace');
+    window.setTimeout(() => {
+      setShowIntro(true);
+      setTransitionStage('intro-enter');
+      window.setTimeout(() => setTransitionStage('intro'), 520);
+    }, 420);
+  };
+
   return (
-    <Box className="app-shell">
-      <Box className="hero-band">
-        <Box className="hero-copy">
-          <Chip icon={<DataObject />} label="MongoDB CRUD Dashboard" className="hero-chip" />
-          <Typography variant="h2" component="h1">
-            Student Project Registry
-          </Typography>
-          <Typography variant="body1">
-            Navigate live database records with add, edit, delete, search, filters, status updates, and analytics.
-          </Typography>
-          <Stack direction="row" spacing={1.5} className="hero-actions">
-            <Button variant="contained" startIcon={<Add />} onClick={openCreateDialog}>
-              Add Project
-            </Button>
-            <Tooltip title="Refresh database records">
-              <IconButton onClick={fetchProjects} aria-label="refresh records">
-                <Refresh />
-              </IconButton>
-            </Tooltip>
-          </Stack>
-        </Box>
-        <Box className="hero-visual" aria-hidden="true">
-          <Box className="database-core">
-            <span />
-            <span />
-            <span />
-          </Box>
-          <Box className="metric-float metric-one">
-            <AssignmentTurnedIn />
-            <strong>{completionRate}%</strong>
-            <small>completed</small>
-          </Box>
-          <Box className="metric-float metric-two">
-            <WarningAmber />
-            <strong>{stats.urgent}</strong>
-            <small>high priority</small>
-          </Box>
-        </Box>
+    <Box className={`app-shell stage-${transitionStage}`}>
+      <Box className="page-background">
+        <Box className="aurora aurora-one" />
+        <Box className="aurora aurora-two" />
+        <Box className="aurora aurora-three" />
+        <Box className="grid-glow" />
       </Box>
 
-      <Box className="content-wrap">
-        {message && (
-          <Alert severity="info" onClose={() => setMessage('')} className="app-alert">
-            {message}
-          </Alert>
-        )}
+      {showIntro ? (
+        <Box className={`intro-screen ${transitionStage === 'exiting-intro' ? 'screen-exit' : 'screen-enter'}`}>
+          <Box className="intro-panel">
+            <Box className="intro-content">
+              <Stack direction="row" spacing={1.25} useFlexGap flexWrap="wrap" className="intro-topline">
+                <Chip icon={<AutoAwesomeMotion />} label="Modern project workspace" className="intro-chip intro-chip-bright" />
+              </Stack>
 
-        <Grid container spacing={2.5} className="stats-grid">
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper className="stat-card">
-              <School />
-              <span>Total Projects</span>
-              <strong>{stats.total}</strong>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper className="stat-card">
-              <AssignmentTurnedIn />
-              <span>Completed</span>
-              <strong>{stats.completed}</strong>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper className="stat-card">
-              <TrendingUp />
-              <span>In Review</span>
-              <strong>{stats.inReview}</strong>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper className="stat-card">
-              <DataObject />
-              <span>Departments</span>
-              <strong>{stats.departments}</strong>
-            </Paper>
-          </Grid>
-        </Grid>
+              <Typography variant="h1" component="h1">
+                Student Project Registry
+              </Typography>
 
-        <Paper className="control-panel">
-          <TextField
-            label="Search records"
-            value={filters.search}
-            onChange={(event) => updateFilter('search', event.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search />
-                </InputAdornment>
-              )
-            }}
-          />
-          <FormControl>
-            <InputLabel>Status</InputLabel>
-            <Select label="Status" value={filters.status} onChange={(event) => updateFilter('status', event.target.value)}>
-              <MenuItem value="">All</MenuItem>
-              {statuses.map((status) => (
-                <MenuItem key={status} value={status}>
-                  {status}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl>
-            <InputLabel>Department</InputLabel>
-            <Select label="Department" value={filters.department} onChange={(event) => updateFilter('department', event.target.value)}>
-              <MenuItem value="">All</MenuItem>
-              {departments.map((department) => (
-                <MenuItem key={department} value={department}>
-                  {department}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl>
-            <InputLabel>Priority</InputLabel>
-            <Select label="Priority" value={filters.priority} onChange={(event) => updateFilter('priority', event.target.value)}>
-              <MenuItem value="">All</MenuItem>
-              {priorities.map((priority) => (
-                <MenuItem key={priority} value={priority}>
-                  {priority}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl>
-            <InputLabel>Sort</InputLabel>
-            <Select label="Sort" value={filters.sort} onChange={(event) => updateFilter('sort', event.target.value)}>
-              <MenuItem value="-updatedAt">Recently updated</MenuItem>
-              <MenuItem value="dueDate">Due date</MenuItem>
-              <MenuItem value="title">Title</MenuItem>
-              <MenuItem value="-budget">Highest budget</MenuItem>
-            </Select>
-          </FormControl>
-          <Button
-            variant="outlined"
-            startIcon={<FilterList />}
-            onClick={() => setFilters({ search: '', status: '', department: '', priority: '', sort: '-updatedAt' })}
-          >
-            Clear
-          </Button>
-        </Paper>
+              <Typography className="intro-text">
+                Manage projects, deadlines, mentors, and updates in one attractive dashboard designed for students and teachers.
+              </Typography>
 
-        {loading && <LinearProgress className="loader" />}
+              <Stack direction="row" spacing={1.5} className="intro-actions">
+                <Button variant="contained" endIcon={<ArrowForward />} onClick={enterWorkspace}>
+                  Open dashboard
+                </Button>
+              </Stack>
+            </Box>
 
-        <Grid container spacing={2.5} className="project-grid">
-          {projects.map((project) => (
-            <Grid item xs={12} md={6} xl={4} key={project._id}>
-              <Paper className="project-card">
-                <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
-                  <Box>
-                    <Chip className={statusClass[project.status]} label={project.status} size="small" />
-                    <Typography variant="h5">{project.title}</Typography>
+            <Box className="intro-orbit">
+              <Box className="ring ring-one" />
+              <Box className="ring ring-two" />
+              <Box className="ring ring-three" />
+
+              <Paper className="intro-float intro-float-main">
+                <TaskAlt />
+                <Box>
+                  <strong>{dashboardMetrics.progress}%</strong>
+                  <span>completion</span>
+                </Box>
+              </Paper>
+
+              <Paper className="intro-float intro-float-left">
+                <RocketLaunch />
+                <Box>
+                  <strong>{stats.total}</strong>
+                  <span>projects</span>
+                </Box>
+              </Paper>
+
+              <Paper className="intro-float intro-float-right">
+                <WarningAmber />
+                <Box>
+                  <strong>{stats.urgent}</strong>
+                  <span>urgent</span>
+                </Box>
+              </Paper>
+            </Box>
+          </Box>
+        </Box>
+      ) : (
+        <Box className={`workspace-screen ${transitionStage === 'exiting-workspace' ? 'screen-exit' : 'screen-enter'}`}>
+          <Box className="workspace-hero">
+            <Box className="workspace-copy">
+              <Stack direction="row" spacing={1.25} useFlexGap flexWrap="wrap" className="workspace-topline">
+                <Chip icon={<Insights />} label="Live project tracking" className="workspace-chip workspace-chip-bright" />
+                <Chip icon={<School />} label="Students and teachers" className="workspace-chip workspace-chip-glass" />
+              </Stack>
+
+              <Typography variant="h2" component="h1">
+                ProjectSphere
+              </Typography>
+
+              <Typography className="workspace-text">
+                Student Project Management System
+              </Typography>
+
+              <Typography className="workspace-subtext">
+                Empowering Academic Innovation
+              </Typography>
+
+              <Stack direction="row" spacing={1.5} className="workspace-actions">
+                <Button variant="contained" startIcon={<Add />} onClick={openCreateDialog}>
+                  Add project
+                </Button>
+                <Button variant="outlined" startIcon={<Refresh />} onClick={fetchProjects}>
+                  Refresh
+                </Button>
+                <Button variant="text" startIcon={<HomeRounded />} onClick={goToIntro}>
+                  Home
+                </Button>
+              </Stack>
+            </Box>
+          </Box>
+
+          <Box className="content-wrap">
+            {message && (
+              <Alert severity="info" onClose={() => setMessage('')} className="app-alert">
+                {message}
+              </Alert>
+            )}
+
+            <Box className="live-strip">
+              <StatPill icon={<DataObject />} label="Total" value={stats.total} />
+              <StatPill icon={<TaskAlt />} label="Completed" value={stats.completed} />
+              <StatPill icon={<Insights />} label="Review" value={stats.inReview} />
+              <StatPill icon={<WarningAmber />} label="Urgent" value={stats.urgent} />
+              <StatPill icon={<AutoAwesome />} label="Budget" value={dashboardMetrics.totalBudget} formatter={formatCurrency} />
+            </Box>
+
+            <Grid container spacing={2.5}>
+              <Grid item xs={12} xl={8.5}>
+                <Paper className="control-panel">
+                  <Box className="control-panel-heading">
+                    <Box className="control-icon-badge">
+                      <FilterList />
+                    </Box>
+                    <Box>
+                      <Typography variant="h5">Browse records</Typography>
+                      <Typography>Search, filter, sort, and manage projects with clarity.</Typography>
+                    </Box>
                   </Box>
-                  <Chip color={priorityColor[project.priority]} label={project.priority} size="small" />
-                </Stack>
 
-                <Typography className="summary">{project.summary}</Typography>
+                  <Box className="control-grid">
+                    <TextField
+                      label="Search"
+                      value={filters.search}
+                      onChange={(event) => updateFilter('search', event.target.value)}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Search />
+                          </InputAdornment>
+                        )
+                      }}
+                    />
+                    <FormControl>
+                      <InputLabel>Status</InputLabel>
+                      <Select label="Status" value={filters.status} onChange={(event) => updateFilter('status', event.target.value)}>
+                        <MenuItem value="">All</MenuItem>
+                        {statuses.map((status) => (
+                          <MenuItem key={status} value={status}>
+                            {status}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <FormControl>
+                      <InputLabel>Department</InputLabel>
+                      <Select label="Department" value={filters.department} onChange={(event) => updateFilter('department', event.target.value)}>
+                        <MenuItem value="">All</MenuItem>
+                        {departments.map((department) => (
+                          <MenuItem key={department} value={department}>
+                            {department}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <FormControl>
+                      <InputLabel>Priority</InputLabel>
+                      <Select label="Priority" value={filters.priority} onChange={(event) => updateFilter('priority', event.target.value)}>
+                        <MenuItem value="">All</MenuItem>
+                        {priorities.map((priority) => (
+                          <MenuItem key={priority} value={priority}>
+                            {priority}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <FormControl>
+                      <InputLabel>Sort</InputLabel>
+                      <Select label="Sort" value={filters.sort} onChange={(event) => updateFilter('sort', event.target.value)}>
+                        <MenuItem value="-updatedAt">Recently updated</MenuItem>
+                        <MenuItem value="dueDate">Due date</MenuItem>
+                        <MenuItem value="title">Title</MenuItem>
+                        <MenuItem value="-budget">Highest budget</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <Button variant="outlined" startIcon={<Refresh />} onClick={() => setFilters({ ...sortDefaults })}>
+                      Reset
+                    </Button>
+                  </Box>
+                </Paper>
 
-                <Grid container spacing={1.5} className="detail-grid">
-                  <Grid item xs={6}>
-                    <Person />
-                    <span>{project.studentName}</span>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <School />
-                    <span>{project.rollNumber}</span>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <DataObject />
-                    <span>{project.department}</span>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <CalendarMonth />
-                    <span>{project.dueDate ? new Date(project.dueDate).toLocaleDateString() : 'No date'}</span>
-                  </Grid>
+                {loading && <LinearProgress className="loader" />}
+
+                <Grid container spacing={2.5} className="project-grid">
+                  {projects.map((project) => {
+                    return (
+                      <Grid item xs={12} md={6} key={project._id}>
+                        <Paper className="project-card">
+                          <Box className="card-glow" />
+                          <Box className="card-shine" />
+
+                          <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
+                            <Box className="card-title-wrap">
+                              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap className="project-badges">
+                                <Chip label={project.status} size="small" className={statusClass[project.status]} />
+                                <Chip label={project.priority} size="small" className={priorityClass[project.priority]} />
+                              </Stack>
+                              <Typography variant="h5">{project.title}</Typography>
+                              <Typography className="card-subtitle">{project.summary}</Typography>
+                            </Box>
+
+                            <Box className="card-budget">
+                              <span>Budget</span>
+                              <strong>{formatCurrency(project.budget)}</strong>
+                            </Box>
+                          </Stack>
+
+                          <Box className="meta-strip">
+                            <Box>
+                              <Person />
+                              <span>{project.studentName}</span>
+                            </Box>
+                            <Box>
+                              <School />
+                              <span>{project.rollNumber}</span>
+                            </Box>
+                            <Box>
+                              <DataObject />
+                              <span>{project.department}</span>
+                            </Box>
+                            <Box>
+                              <CalendarMonth />
+                              <span>{formatDate(project.dueDate)}</span>
+                            </Box>
+                          </Box>
+
+                          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" className="signal-row">
+                            <Chip icon={<AutoAwesome />} label={`Mentor: ${project.mentor}`} className="mentor-chip" size="small" />
+                          </Stack>
+
+                          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap className="tag-row">
+                            {(project.tags || []).map((tag) => (
+                              <Chip key={tag} icon={<LocalOffer />} label={tag} size="small" variant="outlined" />
+                            ))}
+                          </Stack>
+
+                          <Divider />
+
+                          <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1.5} className="card-actions">
+                            <FormControl size="small">
+                              <InputLabel>Move</InputLabel>
+                              <Select label="Move" value={project.status} onChange={(event) => updateStatus(project, event.target.value)}>
+                                {statuses.map((status) => (
+                                  <MenuItem key={status} value={status}>
+                                    {status}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+
+                            <Stack direction="row" spacing={0.75}>
+                              <Tooltip title="Edit project">
+                                <IconButton onClick={() => openEditDialog(project)} aria-label="edit project">
+                                  <Edit />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Delete project">
+                                <IconButton color="error" onClick={() => deleteProject(project)} aria-label="delete project">
+                                  <Delete />
+                                </IconButton>
+                              </Tooltip>
+                            </Stack>
+                          </Stack>
+                        </Paper>
+                      </Grid>
+                    );
+                  })}
                 </Grid>
 
-                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap className="tag-row">
-                  {(project.tags || []).map((tag) => (
-                    <Chip key={tag} icon={<AutoAwesome />} label={tag} size="small" variant="outlined" />
-                  ))}
-                </Stack>
+                {!loading && projects.length === 0 && (
+                  <Paper className="empty-state">
+                    <DataObject />
+                    <Typography variant="h5">No matching records</Typography>
+                    <Typography>Add a new project or adjust filters to see data here.</Typography>
+                    <Button variant="contained" startIcon={<Add />} onClick={openCreateDialog}>
+                      Add project
+                    </Button>
+                  </Paper>
+                )}
+              </Grid>
 
-                <Divider />
+              <Grid item xs={12} xl={3.5}>
+                <Box className="side-rail">
+                  <Paper className="side-panel">
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Typography variant="h6">Project flow</Typography>
+                      <Chip label={`${dashboardMetrics.progress}%`} size="small" className="side-chip" />
+                    </Stack>
+                    <LinearProgress variant="determinate" value={dashboardMetrics.progress} className="side-progress" />
+                    <Typography className="side-copy">
+                      Track how quickly projects move from planning to completion.
+                    </Typography>
+                  </Paper>
 
-                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1.5} className="card-actions">
-                  <FormControl size="small">
-                    <InputLabel>Move</InputLabel>
-                    <Select label="Move" value={project.status} onChange={(event) => updateStatus(project, event.target.value)}>
-                      {statuses.map((status) => (
-                        <MenuItem key={status} value={status}>
-                          {status}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <Stack direction="row" spacing={0.5}>
-                    <Tooltip title="Edit project">
-                      <IconButton onClick={() => openEditDialog(project)} aria-label="edit project">
-                        <Edit />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete project">
-                      <IconButton color="error" onClick={() => deleteProject(project)} aria-label="delete project">
-                        <Delete />
-                      </IconButton>
-                    </Tooltip>
-                  </Stack>
-                </Stack>
-              </Paper>
+                  <Paper className="side-panel">
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Typography variant="h6">Recent updates</Typography>
+                      <Insights />
+                    </Stack>
+                    <Box className="recent-list">
+                      {dashboardMetrics.recent.length ? (
+                        dashboardMetrics.recent.map((project) => (
+                          <Box className="recent-item" key={project._id}>
+                            <strong>{project.title}</strong>
+                            <span>{formatDate(project.updatedAt)}</span>
+                          </Box>
+                        ))
+                      ) : (
+                        <Typography className="side-copy">Recent activity will appear here after saving projects.</Typography>
+                      )}
+                    </Box>
+                  </Paper>
+
+                  <Paper className="side-panel side-panel-highlight">
+                    <AutoAwesomeMotion />
+                    <Typography variant="h6">Registry pulse</Typography>
+                    <strong>{dashboardMetrics.active}</strong>
+                    <Typography className="side-copy">Projects are currently in active progress.</Typography>
+                  </Paper>
+                </Box>
+              </Grid>
             </Grid>
-          ))}
-        </Grid>
+          </Box>
+        </Box>
+      )}
 
-        {!loading && projects.length === 0 && (
-          <Paper className="empty-state">
-            <DataObject />
-            <Typography variant="h5">No matching records</Typography>
-            <Typography>Adjust filters or add a new project to MongoDB.</Typography>
-            <Button variant="contained" startIcon={<Add />} onClick={openCreateDialog}>
-              Add First Project
-            </Button>
-          </Paper>
-        )}
-      </Box>
-
-      <Dialog open={open} onClose={closeDialog} fullWidth maxWidth="md">
+      <Dialog open={open} onClose={closeDialog} fullWidth maxWidth="md" className="project-dialog">
         <DialogTitle>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <span>{editingId ? 'Edit Project Record' : 'Add New Project Record'}</span>
+            <Box>
+              <Typography variant="h5">{editingId ? 'Edit project' : 'Add project'}</Typography>
+              <Typography className="dialog-subtitle">Save clean project information into the registry.</Typography>
+            </Box>
             <IconButton onClick={closeDialog} aria-label="close dialog">
               <Close />
             </IconButton>
           </Stack>
         </DialogTitle>
+
         <DialogContent dividers>
           <Grid container spacing={2}>
             <Grid item xs={12} md={8}>
@@ -513,13 +683,26 @@ function App() {
             </Grid>
           </Grid>
         </DialogContent>
+
         <DialogActions>
           <Button onClick={closeDialog}>Cancel</Button>
           <Button variant="contained" startIcon={<Save />} onClick={saveProject} disabled={saving}>
-            {saving ? 'Saving' : 'Save Record'}
+            {saving ? 'Saving' : 'Save record'}
           </Button>
         </DialogActions>
       </Dialog>
+    </Box>
+  );
+}
+
+function StatPill({ icon, label, value, formatter }) {
+  return (
+    <Box className="stat-pill">
+      <Box className="stat-pill-icon">{icon}</Box>
+      <Box>
+        <span>{label}</span>
+        <strong>{formatter ? formatter(value) : value}</strong>
+      </Box>
     </Box>
   );
 }
